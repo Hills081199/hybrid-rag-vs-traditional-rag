@@ -1,95 +1,95 @@
-# So sánh Traditional RAG và Hybrid RAG
+# Comparing Traditional RAG and Hybrid RAG
 
-Dự án này thực hiện cài đặt và so sánh hai phương pháp Retrieval-Augmented Generation (RAG): **Traditional RAG** (chỉ sử dụng Semantic Search) và **Hybrid RAG** (kết hợp Semantic Search và Keyword Search).
+This project implements and compares two Retrieval-Augmented Generation (RAG) methods: **Traditional RAG** (using only Semantic Search) and **Hybrid RAG** (combining Semantic Search and Keyword Search).
 
-## 1. Lý thuyết: Traditional RAG vs Hybrid RAG
+## 1. Theory: Traditional RAG vs Hybrid RAG
 
 ### Traditional RAG (Semantic Search)
-Traditional RAG dựa chủ yếu vào tìm kiếm ngữ nghĩa (Semantic Search) sử dụng **Dense Vectors**.
-- **Cách hoạt động:** Dữ liệu văn bản được đưa qua một mô hình nhúng (Embedding Model) để tạo ra các vector mang mật độ cao (Dense Vectors) chứa thông tin về mặt ngữ nghĩa. Khi người dùng đặt câu hỏi, câu hỏi cũng được chuyển thành vector tương tự. Hệ thống sẽ tính toán khoảng cách (như Cosine Similarity) giữa vector câu hỏi và các vector tài liệu để tìm ra các tài liệu có ý nghĩa gần nhất.
-- **Ưu điểm:** Hiểu được ngữ cảnh và sự đồng nghĩa. Ngay cả khi câu hỏi không chứa từ khóa chính xác trong tài liệu, hệ thống vẫn có thể tìm được thông tin dựa trên ý nghĩa.
-- **Nhược điểm:** Thường kém hiệu quả khi tìm kiếm các từ khóa chính xác, mã số, tên riêng, hoặc các từ viết tắt chuyên ngành. Nó có thể trả về các văn bản "có vẻ liên quan" nhưng lại thiếu đi thông tin chính xác mà người dùng cần.
+Traditional RAG relies primarily on semantic search using **Dense Vectors**.
+- **How it works:** Text data is passed through an Embedding Model to generate dense vectors containing semantic information. When a user asks a question, the query is also converted into a similar vector. The system calculates the distance (e.g., Cosine Similarity) between the query vector and document vectors to find the most semantically relevant documents.
+- **Pros:** Understands context and synonymy. Even if the query does not contain exact keywords found in the document, the system can still find information based on meaning.
+- **Cons:** Often ineffective when searching for exact keywords, ID numbers, proper nouns, or specialized acronyms. It might return "seemingly relevant" texts that lack the precise information the user needs.
 
 ### Hybrid RAG
-Hybrid RAG kết hợp điểm mạnh của cả tìm kiếm ngữ nghĩa (Dense Vectors) và tìm kiếm từ khóa (Sparse Vectors - ví dụ: BM25).
-- **Cách hoạt động:** 
-  - **Quá trình nạp dữ liệu:** Hệ thống nhúng văn bản thành cả Dense Vectors (để bắt ngữ nghĩa) và Sparse Vectors (để đếm tần suất từ khóa, chú trọng vào các từ vựng đặc trưng).
-  - **Quá trình truy vấn:** Khi có câu hỏi, hệ thống thực hiện cả tìm kiếm ngữ nghĩa và tìm kiếm từ khóa đồng thời trên cơ sở dữ liệu vector.
-  - **Kết hợp (Fusion):** Kết quả từ hai phương pháp này sau đó được kết hợp lại sử dụng các thuật toán như **Reciprocal Rank Fusion (RRF)**. RRF giúp xếp hạng lại (re-rank) và đưa ra danh sách kết quả cuối cùng cân bằng được cả hai yếu tố.
-- **Ưu điểm:** Khắc phục triệt để nhược điểm của Traditional RAG. Vừa hiểu được ngữ nghĩa phức tạp, vừa tìm kiếm cực kỳ chính xác các mã số, tên riêng, từ viết tắt (ví dụ: "ĐHĐCĐ 2023", mã cổ phiếu, v.v.).
+Hybrid RAG combines the strengths of both semantic search (Dense Vectors) and keyword search (Sparse Vectors - e.g., BM25).
+- **How it works:** 
+  - **Ingestion process:** The system embeds text into both Dense Vectors (to capture semantics) and Sparse Vectors (to count keyword frequency, focusing on specific vocabulary).
+  - **Retrieval process:** When a query is made, the system performs both semantic search and keyword search simultaneously on the vector database.
+  - **Fusion:** Results from both methods are then combined using algorithms like **Reciprocal Rank Fusion (RRF)**. RRF helps re-rank and produce a final list of results that balances both factors.
+- **Pros:** Completely overcomes the limitations of Traditional RAG. It understands complex semantics while accurately retrieving ID numbers, proper nouns, and acronyms (e.g., "AGM 2023", stock tickers, etc.).
 
-## 2. Luồng hoạt động (Workflow)
+## 2. Workflow
 
-### Quá trình Ingestion (Nạp dữ liệu)
-Cả hai phương pháp đều bắt đầu bằng việc đọc file PDF và chia nhỏ thành các đoạn (chunking).
+### Ingestion Phase
+Both methods begin by reading a PDF file and breaking it down into chunks.
 
-- **Traditional RAG:** Tạo Dense Vector cho mỗi chunk và lưu vào Qdrant (collection `traditional_rag`).
+- **Traditional RAG:** Generates a Dense Vector for each chunk and saves it into Qdrant (`traditional_rag` collection).
   
   ![Ingestion Traditional RAG](./ingestion_phase_traditional_rag.PNG)
 
-- **Hybrid RAG:** Tạo CẢ Dense Vector và Sparse Vector (BM25) cho mỗi chunk, sau đó lưu cả hai vào Qdrant (collection `hybrid_rag`).
+- **Hybrid RAG:** Generates BOTH Dense Vectors and Sparse Vectors (BM25) for each chunk, then saves both into Qdrant (`hybrid_rag` collection).
   
   ![Ingestion Hybrid RAG](./ingestion_phase_hybrid_rag.PNG)
 
-### Quá trình Retrieval (Truy xuất)
+### Retrieval Phase
 
-- **Traditional RAG:** Nhúng câu hỏi thành Dense Vector và tìm kiếm các vector tương đồng nhất thông qua khoảng cách Cosine/Dot Product.
+- **Traditional RAG:** Embeds the query into a Dense Vector and searches for the most similar vectors via Cosine/Dot Product distance.
   
   ![Retrieval Traditional RAG](./traditional_retrieval_flow.PNG)
 
-- **Hybrid RAG:** Nhúng câu hỏi thành CẢ Dense và Sparse Vector. Sử dụng tính năng `FusionQuery` của Qdrant kết hợp với thuật toán `RRF` để lấy và xếp hạng kết quả chung từ cả hai nhánh tìm kiếm.
+- **Hybrid RAG:** Embeds the query into BOTH Dense and Sparse Vectors. Uses Qdrant's `FusionQuery` feature combined with the `RRF` algorithm to retrieve and rank the combined results from both search branches.
   
   ![Retrieval Hybrid RAG](./Hybrid_retrieval_flow.PNG)
 
-## 3. Cấu trúc dự án
+## 3. Project Structure
 
-Dự án được tổ chức rõ ràng theo từng giai đoạn của một pipeline RAG:
+The project is clearly organized according to the stages of a RAG pipeline:
 
 ![Folder Structure](./FolderStructure.PNG)
 
-- `src/config.py`: File cấu hình chung cho dự án (đường dẫn, tên mô hình, cấu hình DB).
-- `src/ingestion/`: Logic tiền xử lý dữ liệu.
-  - `pdf_parser.py`: Đọc file PDF và cắt thành các chunk nhỏ.
-  - `embedder.py`: Tải các mô hình `fastembed` (Dense: `bge-small-zh-v1.5`, Sparse: `bm25`) để thực hiện embedding văn bản.
-  - `qdrant_indexer.py`: Khởi tạo collection và đẩy (upsert) vector vào cơ sở dữ liệu Qdrant.
-- `src/retrieval/`: Chứa logic tìm kiếm cho cả `traditional_rag.py` và `hybrid_rag.py`.
-- `src/evaluation/`: Logic để so sánh kết quả trả về của 2 phương pháp với các câu hỏi test khác nhau.
-- `data/raw/`: Thư mục lưu trữ file tài liệu PDF đầu vào.
+- `src/config.py`: General configuration file for the project (paths, model names, DB config).
+- `src/ingestion/`: Data preprocessing logic.
+  - `pdf_parser.py`: Reads the PDF file and splits it into small chunks.
+  - `embedder.py`: Loads `fastembed` models (Dense: `bge-small-zh-v1.5`, Sparse: `bm25`) to perform text embedding.
+  - `qdrant_indexer.py`: Initializes collections and upserts vectors into the Qdrant database.
+- `src/retrieval/`: Contains search logic for both `traditional_rag.py` and `hybrid_rag.py`.
+- `src/evaluation/`: Logic to compare the returned results of the 2 methods with various test queries.
+- `data/raw/`: Directory storing input PDF documents.
 
-## 4. Hướng dẫn khởi chạy
+## 4. How to Run the Project
 
-### Yêu cầu hệ thống
-- Python 3.9 trở lên
-- Docker (dùng để chạy Qdrant Vector Database)
+### System Requirements
+- Python 3.9+
+- Docker (used to run Qdrant Vector Database)
 
-### Bước 1: Cài đặt thư viện phụ thuộc
-Mở terminal tại thư mục gốc của dự án và chạy:
+### Step 1: Install Dependencies
+Open a terminal at the root of the project and run:
 ```bash
 pip install -r requirements.txt
 ```
 
-### Bước 2: Khởi chạy Qdrant
-Dự án sử dụng Qdrant làm cơ sở dữ liệu vector lưu trữ cả Dense và Sparse vectors. Hãy khởi chạy Qdrant qua Docker bằng lệnh:
+### Step 2: Start Qdrant
+The project uses Qdrant as the vector database to store both Dense and Sparse vectors. Start Qdrant via Docker using the following command:
 ```bash
 docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant:latest
 ```
 
-### Bước 3: Chuẩn bị dữ liệu và biến môi trường
-1. Tạo file PDF mà bạn muốn thử nghiệm, đổi tên thành `sample_document.pdf` và đặt vào trong thư mục `data/raw/`. (Nếu bạn muốn dùng tên khác, hãy cập nhật lại biến `PDF_FILE_PATH` trong file `src/config.py`).
-2. Tạo một file tên là `.env` ở thư mục gốc của dự án và điền API Key OpenAI của bạn vào:
+### Step 3: Prepare Data and Environment Variables
+1. Create a PDF file you want to test, rename it to `sample_document.pdf`, and place it in the `data/raw/` directory. (If you want to use a different name, update the `PDF_FILE_PATH` variable in `src/config.py`).
+2. Create a file named `.env` in the root directory of the project and enter your OpenAI API Key:
 ```env
 OPENAI_API_KEY=your-openai-api-key-here
 ```
-*(API Key này được dự án sử dụng cho các LLM nếu có bước tổng hợp và sinh câu trả lời tự động).*
+*(This API Key is used by the project for LLMs if there is an automated answer generation/synthesis step).*
 
-### Bước 4: Chạy dự án và xem so sánh
-Thực thi lệnh sau:
+### Step 4: Run the Project and View the Comparison
+Execute the following command:
 ```bash
 python main.py
 ```
 
-**Quá trình chương trình hoạt động:**
-1. Kiểm tra tài liệu PDF có tồn tại hay không, sau đó Parse và Chunk tài liệu.
-2. Tự động tải mô hình Embedding (`BAAI/bge-small-zh-v1.5` cho ngữ nghĩa và `Qdrant/bm25` cho từ khóa) vào thư mục `models_cache/` nội bộ.
-3. Nhúng (embed) dữ liệu và Indexing vào 2 collection của Qdrant.
-4. Chạy bộ câu hỏi kiểm tra tích hợp sẵn. Bạn sẽ thấy rõ rằng các câu hỏi chứa **tên riêng, mã chuyên ngành** thì Hybrid RAG sẽ truy xuất tốt hơn rất nhiều so với Traditional RAG.
+**Execution Flow:**
+1. Checks if the PDF document exists, then parses and chunks it.
+2. Automatically downloads the Embedding models (`BAAI/bge-small-zh-v1.5` for semantics and `Qdrant/bm25` for keywords) into an internal `models_cache/` directory.
+3. Embeds the data and indexes it into 2 Qdrant collections.
+4. Runs a built-in set of test queries. You will clearly see that for queries containing **proper nouns or specialized codes**, Hybrid RAG will retrieve information much better than Traditional RAG.
